@@ -3,10 +3,6 @@ html {
 	min-height: 100%;
 }
 
-body {
-	min-height: 100%;
-}
-
 nav {
 	height: 50px;
 	width: 100%;
@@ -45,28 +41,6 @@ nav i.fa:hover {
 
 #main-container {
 	padding-bottom: 80px;
-	height: 100%;
-	margin-top: -70px;
-}
-
-.vertical-center {
-	width: -webkit-fit-content;
-	width: fit-content;
-	margin: auto;
-}
-
-.vertical-center#not-logged form {
-	width: -moz-fit-content;
-	margin: auto;
-}
-
-.vertical-center#not-logged table {
-	width: -moz-fit-content;
-	margin: auto;
-}
-
-.vertical-center table {
-	margin-top: 3em !important;
 }
 
 .horizontal-center {
@@ -100,40 +74,6 @@ input.btn {
 .btn-success:hover {
 	background-color: #1abd61 !important;
 	border-color: #1abd61;
-}
-
-.btn-info {
-	background-color: #0088aa !important;
-	border-color: #0088aa;
-}
-
-.btn-info:hover {
-	background-color: #00708c !important;
-	border-color: #00708c;
-}
-
-.btn-warning {
-	background-color: #ffcc00 !important;
-	border-color: #ffcc00;
-	color: #4d4d4d;
-}
-
-.btn-warning:hover {
-	background-color: #eabb3a !important;
-	border-color: #eabb3a;
-	color: #4d4d4d;
-}
-
-.btn-warning:active {
-	color: #4d4d4d;
-}
-
-.btn-warning:focus {
-	color: #4d4d4d;
-}
-
-.btn-warning:active:focus {
-	color: #4d4d4d;
 }
 
 .footer {
@@ -177,18 +117,26 @@ a:hover .demo-logo {
 	filter: brightness(0.7);
 }
 
-#join {
-	padding-top: 40px;
-}
-
-#not-logged {
-	padding-top: 40px;
+#join-dialog {
+	margin-left: auto;
+    margin-right: auto;
+    max-width: 70%;
 }
 
 #join-dialog h1 {
 	color: #4d4d4d;
 	font-weight: bold;
 	text-align: center;
+}
+
+#img-div {
+	text-align: center;
+	margin-top: 3em;
+	margin-bottom: 3em;
+}
+
+#img-div img {
+	height: 250px;
 }
 
 #join-dialog label {
@@ -199,78 +147,28 @@ a:hover .demo-logo {
 	margin-top: 15px;
 }
 
-#join-dialog hr {
-	background: #4d4d4d;
-}
-
-#img-div {
-	text-align: center;
-	padding-bottom: 3em;
-}
-
-#img-div img {
-	height: 15%;
-}
-
-#logged {
-	width: 100%;
-}
-
-#join {
-	max-width: 700px;
-	margin: auto;
-	margin-top: 100px;
-}
-
 #session-header {
 	margin-bottom: 20px;
-	height: 8%;
-	margin-top: 70px;
-}
-
-#session-header form {
-	display: inline-block;
-}
-
-#session-header input.btn {
-	float: right;
-	margin-top: 20px;
-	margin-left: 5px;
 }
 
 #session-title {
 	display: inline-block;
 }
 
-#session-header .form-control {
-	width: initial;
+#buttonLeaveSession {
 	float: right;
-	margin: 18px 0px 0px 5px;
+	margin-top: 20px;
 }
 
-#video-container {
-	width: 100%;
-	max-height: 42%;
-	display: block;
-	overflow: hidden;
-}
-
-#video-container video.two {
-	max-width: 50%;
-}
-
-#video-container video.three {
-	max-width: 33.33%;
-}
-
-#video-container video.four {
-	max-width: 25%;
+#video-container video {
+	position: relative;
+	width: 50%;
+	cursor: pointer;
 }
 
 #video-container div {
-	position: absolute;
-	display: inline-flex;
-	margin-left: calc(-50% + 15px);
+	width: 50%;
+	position: relative;
 }
 
 #video-container p {
@@ -283,26 +181,25 @@ a:hover .demo-logo {
 	border-bottom-right-radius: 4px;
 }
 
-#video-container p.userName {
-	float: right;
-	border-bottom-left-radius: 4px;
-	border-bottom-right-radius: 0px;
-	font-weight: lighter;
-	font-size: 12px;
-	background: #777777;
-	color: #f8f8f8;
-}
-
 video {
-	width: auto;
-    height: auto;
-    max-height: 100%;
-    object-fit: scale-down;
+	width: 100%;
+	height: auto;
 }
 
-#session {
-	height: 100%;
-	padding-bottom: 80px;
+#video-container object {
+	cursor: pointer;
+}
+
+#main-video p {
+	position: absolute;
+	display: inline-block;
+	background: #f8f8f8;
+	padding-left: 5px;
+	padding-right: 5px;
+	font-size: 22px;
+	color: #777777;
+	font-weight: bold;
+	border-bottom-right-radius: 4px;
 }
 
 #session img {
@@ -322,152 +219,38 @@ video {
 	height: 180px;
 }
 
-table i {
-	cursor: pointer;
-	margin-left: 1em;
-}
-
-#tooltip-div {
-	text-align: left;
-}
-
-#tooltip-div hr {
-	margin: 5px 0;
-}
-
-#login-info {
-	text-align: right;
-}
-
-#login-info form {
-	display: inline;
-}
-
-#login-info div {
-	display: inline;
-	margin-right: 1em;
-}
-
-#name-user {
-	font-weight: bold;
-}
-
-#recording-btns {
-	display: inline-block;
-    padding-left: 15px;
-    padding-top: 20px;
-    width: 100%;
-    height: 40%;
-}
-
-#recording-btns .btns {
-	margin-top: 10px;
-}
-
-#recording-btns .btns .form-control {
-	width: initial;
-	display: inline;
-}
-
-#recording-btns .btns form {
-	display: inline;
-	margin-left: 5px;
-}
-
-#recording-btns textarea {
-	height: 100%;
-}
-
-.textarea-container {
-	position: relative;
-	display: inline-block;
-	height: 74%;
-	margin-top: 20px;
-	resize: none;
-}
-
-#textarea-http-container {
-	width: 69%;
-}
-
-#textarea-events-container {
-	width: 29%;
-}
-
-.textarea-container button {
-	position: absolute;
-	top: 1px;
-	right: 1px;
-	z-index: 1;
-}
-
-.textarea-container span {
-	position: absolute;
-	bottom: 1px;
-	right: 1px;
-	padding: 3px;
-	border-bottom-right-radius: 4px;
-	z-index: 1;
-	color: #a5a5a5;
-	background-color: #ededee;
-	font-weight: 600;
-}
-
-.textarea-container textarea {
-	height: 100%;
-	resize: none;
-}
-
-.vertical-separator-bottom {
-	width: 2px;
-	height: 34px;
-	display: inline-block;
-	background-color: #cbcbcb;
-	margin: 0 8px 0 8px;
-	margin-bottom: -12px;
-}
-
-.vertical-separator-top {
-	width: 2px;
-	height: 30px;
-	background-color: #cbcbcb;
-	margin: 20px 8px 0 15px;
-	float: right;
-}
 
 /* xs ans md screen resolutions*/
 
-@media screen and (max-width: 991px) {
-	#join {
-		padding-top: inherit;
+@media screen and (max-width: 991px) and (orientation: portrait) {
+	#join-dialog {
+		max-width: inherit;
 	}
-
-	#not-logged {
-		padding-top: inherit;
-	}
-
-	.container .navbar-header {
-		margin-right: 0 !important;
-		margin-left: 0 !important;
-	}
-
-	.nav-icon {
-		padding: 9px 8px 9px 8px;
-	}
-
-	nav i.fa {
-		font-size: 32px;
-	}
-
-	.vertical-center {
-		padding-top: 10px;
-	}
-
-	#img-div {
-		padding-bottom: 1em;
-	}
-
 	#img-div img {
 		height: 10%;
+	}
+	#img-div {
+		margin-top: 2em;
+		margin-bottom: 2em;
+	}
+	.container-fluid>.navbar-collapse, .container-fluid>.navbar-header, .container>.navbar-collapse, .container>.navbar-header {
+		margin-right: 0;
+		margin-left: 0;
+	}
+	.navbar-header i.fa {
+		font-size: 30px;
+	}
+	.navbar-header a.nav-icon {
+		padding: 7px 3px 7px 3px;
+	}
+}
+
+@media only screen and (max-height: 767px) and (orientation: landscape) {
+	#img-div {
+		margin-top: 1em;
+		margin-bottom: 1em;
+	}
+	#join-dialog {
+		max-width: inherit;
 	}
 }

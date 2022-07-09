@@ -1,170 +1,91 @@
 var OV;
 var session;
-
-var sessionName;
-var token;
-var numVideos = 0;
+var isIE = navigator.userAgent.indexOf('MSIE') !== -1 || navigator.appVersion.indexOf('Trident/') > 0;
+var isFirstVideoCreatedByPublisher = true;
 
 
 /* OPENVIDU METHODS */
 
 function joinSession() {
-	
-	// --- 0) Change the button ---
-		
-	document.getElementById("join-btn").disabled = true;
-	document.getElementById("join-btn").innerHTML = "Joining...";
 
-	getToken(function () {
+	var mySessionId = document.getElementById("sessionId").value;
+	var myUserName = document.getElementById("userName").value;
 
-		// --- 1) Get an OpenVidu object ---
+	// --- 1) Get an OpenVidu object ---
 
-		OV = new OpenVidu();
+	OV = new OpenVidu();
 
-		// --- 2) Init a session ---
+	// --- 2) Init a session ---
 
-		session = OV.initSession();
+	session = OV.initSession();
 
-		// --- 3) Specify the actions when events take place in the session ---
+	// --- 3) Specify the actions when events take place in the session ---
 
-		session.on('connectionCreated', event => {
-			pushEvent(event);
+	// On every new Stream received...
+	session.on('streamCreated', function(event) {
+
+		// Subscribe to the Stream to receive it. HTML video will be appended to element with 'video-container' id
+		var subscriber = session.subscribe(event.stream, 'video-container');
+
+		// When the HTML video has been appended to DOM...
+		subscriber.on('videoElementCreated', function(event) {
+
+			// Add a new <p> element for the user's nickname just below its video
+			appendUserData(subscriber, event.element, subscriber.stream.connection);
 		});
+	});
 
-		session.on('connectionDestroyed', event => {
-			pushEvent(event);
-		});
+	// On every Stream destroyed...
+	session.on('streamDestroyed', function(event) {
 
-		// On every new Stream received...
-		session.on('streamCreated', event => {
-			pushEvent(event);
+		// Delete the HTML element with the user's nickname. HTML videos are automatically removed from DOM
+		removeUserData(event.stream.connection);
+	});
 
-			// Subscribe to the Stream to receive it
-			// HTML video will be appended to element with 'video-container' id
-			var subscriber = session.subscribe(event.stream, 'video-container');
 
-			// When the HTML video has been appended to DOM...
-			subscriber.on('videoElementCreated', event => {
-				pushEvent(event);
-				// Add a new HTML element for the user's name and nickname over its video
-				updateNumVideos(1);
-			});
+	// --- 4) Connect to the session with a valid user token ---
 
-			// When the HTML video has been appended to DOM...
-			subscriber.on('videoElementDestroyed', event => {
-				pushEvent(event);
-				// Add a new HTML element for the user's name and nickname over its video
-				updateNumVideos(-1);
-			});
+	// 'getToken' method is simulating what your server-side should do.
+	// 'token' parameter should be retrieved and returned by your own backend
+	getToken(mySessionId).then(function(token) {
 
-			// When the subscriber stream has started playing media...
-			subscriber.on('streamPlaying', event => {
-				pushEvent(event);
-			});
-		});
-
-		session.on('streamDestroyed', event => {
-			pushEvent(event);
-		});
-
-		session.on('sessionDisconnected', event => {
-			pushEvent(event);
-			if (event.reason !== 'disconnect') {
-				removeUser();
-			}
-			if (event.reason !== 'sessionClosedByServer') {
-				session = null;
-				numVideos = 0;
-				$('#join').show();
-				$('#session').hide();
-			}
-		});
-
-		session.on('recordingStarted', event => {
-			pushEvent(event);
-		});
-
-		session.on('recordingStopped', event => {
-			pushEvent(event);
-		});
-
-		// On every asynchronous exception...
-		session.on('exception', (exception) => {
-			console.warn(exception);
-		});
-
-		// --- 4) Connect to the session passing the retrieved token and some more data from
-		//        the client (in this case a JSON with the nickname chosen by the user) ---
-
-		session.connect(token)
-			.then(() => {
+		// First param is the token got from OpenVidu Server. Second param can be retrieved by every user on event
+		// 'streamCreated' (property Stream.connection.data), and will be appended to DOM as the user's nickname
+		session.connect(token, { clientData: myUserName })
+			.then(function() {
 
 				// --- 5) Set page layout for active call ---
 
-				$('#session-title').text(sessionName);
-				$('#join').hide();
-				$('#session').show();
+				document.getElementById('session-title').innerText = mySessionId;
+				document.getElementById('join').style.display = 'none';
+				document.getElementById('session').style.display = 'block';
 
-				// --- 6) Get your own camera stream ---
+				// --- 6) Get your own camera stream with the desired properties ---
 
 				var publisher = OV.initPublisher('video-container', {
 					audioSource: undefined, // The source of audio. If undefined default microphone
 					videoSource: undefined, // The source of video. If undefined default webcam
-					publishAudio: true, // Whether you want to start publishing with your audio unmuted or not
-					publishVideo: true, // Whether you want to start publishing with your video enabled or not
-					resolution: '640x480', // The resolution of your video
-					frameRate: 30, // The frame rate of your video
-					insertMode: 'APPEND', // How the video is inserted in the target element 'video-container'
-					mirror: false // Whether to mirror your local video or not
+					publishAudio: true,  	// Whether you want to start publishing with your audio unmuted or not
+					publishVideo: true,  	// Whether you want to start publishing with your video enabled or not
+					resolution: '640x480',  // The resolution of your video
+					frameRate: 30,			// The frame rate of your video
+					insertMode: 'APPEND',	// How the video is inserted in the target element 'video-container'
+					mirror: false       	// Whether to mirror your local video or not
 				});
 
 				// --- 7) Specify the actions when events take place in our publisher ---
 
-				// When the publisher stream has started playing media...
-				publisher.on('accessAllowed', event => {
-					pushEvent({
-						type: 'accessAllowed'
-					});
-				});
-
-				publisher.on('accessDenied', event => {
-					pushEvent(event);
-				});
-
-				publisher.on('accessDialogOpened', event => {
-					pushEvent({
-						type: 'accessDialogOpened'
-					});
-				});
-
-				publisher.on('accessDialogClosed', event => {
-					pushEvent({
-						type: 'accessDialogClosed'
-					});
-				});
-
-				// When the publisher stream has started playing media...
-				publisher.on('streamCreated', event => {
-					pushEvent(event);
-				});
-
 				// When our HTML video has been added to DOM...
-				publisher.on('videoElementCreated', event => {
-					pushEvent(event);
-					updateNumVideos(1);
-					$(event.element).prop('muted', true); // Mute local video
-				});
-
-				// When the HTML video has been appended to DOM...
-				publisher.on('videoElementDestroyed', event => {
-					pushEvent(event);
-					// Add a new HTML element for the user's name and nickname over its video
-					updateNumVideos(-1);
-				});
-
-				// When the publisher stream has started playing media...
-				publisher.on('streamPlaying', event => {
-					pushEvent(event);
+				publisher.on('videoElementCreated', function (event) {
+					if (isFirstVideoCreatedByPublisher) {
+						// Calling StreamManger.addVideoElement inside initMainVideo method will
+						// trigger a new videoElementCreated event in IExplorer. We must ignore it the second
+						// time to avoid an infinite recursive call to this same event handler
+						isFirstVideoCreatedByPublisher = false;
+						initMainVideo(publisher, myUserName);
+						appendUserData(publisher, event.element, myUserName);
+						event.element['muted'] = true;
+					}
 				});
 
 				// --- 8) Publish your stream ---
@@ -172,300 +93,169 @@ function joinSession() {
 				session.publish(publisher);
 
 			})
-			.catch(error => {
-				console.warn('There was an error connecting to the session:', error.code, error.message);
-				enableBtn();
+			.catch(function(error) {
+				console.log('There was an error connecting to the session:', error.code, error.message);
 			});
-
-		return false;
 	});
 }
 
 function leaveSession() {
 
 	// --- 9) Leave the session by calling 'disconnect' method over the Session object ---
+
 	session.disconnect();
-	enableBtn();
 
+	// Removing all HTML elements with user's nicknames.
+	// HTML videos are automatically removed when leaving a Session
+	removeAllUserData();
+
+	// Back to 'Join session' page
+	document.getElementById('join').style.display = 'block';
+	document.getElementById('session').style.display = 'none';
 }
 
-/* OPENVIDU METHODS */
 
-function enableBtn (){
-	document.getElementById("join-btn").disabled = false;
-	document.getElementById("join-btn").innerHTML = "Join!";
+
+/* APPLICATION SPECIFIC METHODS */
+
+window.addEventListener('load', function () {
+	generateParticipantInfo();
+});
+
+window.onbeforeunload = function () {
+	if (session) session.disconnect();
+};
+
+function generateParticipantInfo() {
+	document.getElementById("sessionId").value = "Sessionb";
+	document.getElementById("userName").value = "Participant" + Math.floor(Math.random() * 100);
 }
 
-/* APPLICATION REST METHODS */
+function appendUserData(streamManager, videoElement, connection) {
+	var userData;
+	var nodeId;
+	if (typeof connection === "string") {
+		userData = connection;
+		nodeId = connection;
+	} else {
+		userData = JSON.parse(connection.data).clientData;
+		nodeId = connection.connectionId;
+	}
+	nodeId = "data-" + nodeId;
+	if (!document.getElementById(nodeId)) {
+		// Only if data node does not exist
+		var dataNode = document.createElement('div');
+		dataNode.className = "data-node";
+		dataNode.id = nodeId;
+		dataNode.innerHTML = "<p>" + userData + "</p>";
+		videoElement.parentNode.insertBefore(dataNode, videoElement.nextSibling);
+		addClickListener(streamManager, videoElement, userData);
+	}
+}
 
-function getToken(callback) {
-	sessionName = $("#sessionName").val(); // Video-call chosen by the user
+function removeUserData(connection) {
+	var dataNode = document.getElementById("data-" + connection.connectionId);
+	dataNode.parentNode.removeChild(dataNode);
+}
 
-	httpRequest(
-		'POST',
-		'recording-node/api/get-token', {
-			sessionName: sessionName
-		},
-		'Request of TOKEN gone WRONG:',
-		res => {
-			token = res[0]; // Get token from response
-			console.warn('Request of TOKEN gone WELL (TOKEN:' + token + ')');
-			callback(token); // Continue the join operation
+function removeAllUserData() {
+	var nicknameElements = document.getElementsByClassName('data-node');
+	while (nicknameElements[0]) {
+		nicknameElements[0].parentNode.removeChild(nicknameElements[0]);
+	}
+}
+
+function addClickListener(streamManager, videoElement, userData) {
+	videoElement.addEventListener('mousedown', function () {
+		var mainVideo;
+		var differentVideo;
+		if (isIE) {
+			mainVideo = $('#main-video object').get(0);
+			differentVideo = true;
+		} else {
+			mainVideo = $('#main-video video').get(0);
+			differentVideo = mainVideo.srcObject !== videoElement.srcObject
 		}
-	);
-}
-
-function removeUser() {
-	httpRequest(
-		'POST',
-		'recording-node/api/remove-user', {
-			sessionName: sessionName,
-			token: token
-		},
-		'User couldn\'t be removed from session',
-		res => {
-			console.warn("You have been removed from session " + sessionName);
+		if (differentVideo) {
+			$('#main-video').fadeOut("fast", function() {
+				$('#main-video p').html(userData);
+				streamManager.addVideoElement(mainVideo);
+				$('#main-video').fadeIn("fast");
+			});
 		}
-	);
+	});
 }
 
-function closeSession() {
-	httpRequest(
-		'DELETE',
-		'recording-node/api/close-session', {
-			sessionName: sessionName
-		},
-		'Session couldn\'t be closed',
-		res => {
-			console.warn("Session " + sessionName + " has been closed");
-		}
-	);
+function initMainVideo(publisher, userData) {
+	var mainVideo = document.querySelector('#main-video video');
+	if (isIE && !mainVideo) {
+		// If IE and the main video has already been inserted by the plugin,
+		// search for an object element instead of a video element
+		mainVideo = document.querySelector('#main-video object');
+	}
+	publisher.addVideoElement(mainVideo);
+	document.querySelector('#main-video p').innerHTML = userData;
 }
 
-function fetchInfo() {
-	httpRequest(
-		'POST',
-		'recording-node/api/fetch-info', {
-			sessionName: sessionName
-		},
-		'Session couldn\'t be fetched',
-		res => {
-			console.warn("Session info has been fetched");
-			$('#textarea-http').text(JSON.stringify(res, null, "\t"));
-		}
-	);
+
+
+/**
+ * --------------------------
+ * SERVER-SIDE RESPONSIBILITY
+ * --------------------------
+ * These methods retrieve the mandatory user token from OpenVidu Server.
+ * This behavior MUST BE IN YOUR SERVER-SIDE IN PRODUCTION (by using
+ * the API REST, openvidu-java-client or openvidu-node-client):
+ *   1) Initialize a Session in OpenVidu Server	(POST /openvidu/api/sessions)
+ *   2) Create a Connection in OpenVidu Server (POST /openvidu/api/sessions/<SESSION_ID>/connection)
+ *   3) The Connection.token must be consumed in Session.connect() method
+ */
+
+var OPENVIDU_SERVER_URL = "https://" + location.hostname + ":4443";
+var OPENVIDU_SERVER_SECRET = "MY_SECRET";
+
+function getToken(mySessionId) {
+	return createSession(mySessionId).then(function(sessionId) { return createToken(sessionId); });
 }
 
-function fetchAll() {
-	httpRequest(
-		'GET',
-		'recording-node/api/fetch-all', {},
-		'All session info couldn\'t be fetched',
-		res => {
-			console.warn("All session info has been fetched");
-			$('#textarea-http').text(JSON.stringify(res, null, "\t"));
-		}
-	);
-}
-
-function forceDisconnect() {
-	httpRequest(
-		'DELETE',
-		'recording-node/api/force-disconnect', {
-			sessionName: sessionName,
-			connectionId: document.getElementById('forceValue').value
-		},
-		'Connection couldn\'t be closed',
-		res => {
-			console.warn("Connection has been closed");
-		}
-	);
-}
-
-function forceUnpublish() {
-	httpRequest(
-		'DELETE',
-		'recording-node/api/force-unpublish', {
-			sessionName: sessionName,
-			streamId: document.getElementById('forceValue').value
-		},
-		'Stream couldn\'t be closed',
-		res => {
-			console.warn("Stream has been closed");
-		}
-	);
-}
-
-function httpRequest(method, url, body, errorMsg, callback) {
-	$('#textarea-http').text('');
-	var http = new XMLHttpRequest();
-	http.open(method, url, true);
-	http.setRequestHeader('Content-type', 'application/json');
-	http.addEventListener('readystatechange', processRequest, false);
-	http.send(JSON.stringify(body));
-
-	function processRequest() {
-		if (http.readyState == 4) {
-			if (http.status == 200) {
-				try {
-					callback(JSON.parse(http.responseText));
-				} catch (e) {
-					callback(e);
+function createSession(sessionId) { // See https://docs.openvidu.io/en/stable/reference-docs/REST-API/#post-openviduapisessions
+	return new Promise(function(resolve, reject) {
+		$.ajax({
+			type: "POST",
+			url: OPENVIDU_SERVER_URL + "/openvidu/api/sessions",
+			data: JSON.stringify({ customSessionId: sessionId }),
+			headers: {
+				"Authorization": "Basic " + btoa("OPENVIDUAPP:" + OPENVIDU_SERVER_SECRET),
+				"Content-Type": "application/json"
+			},
+			success: function(response) { resolve(response.id); },
+			error: function(error) {
+				if (error.status === 409) {
+					resolve(sessionId);
+				} else {
+					console.warn('No connection to OpenVidu Server. This may be a certificate error at ' + OPENVIDU_SERVER_URL);
+					if (window.confirm('No connection to OpenVidu Server. This may be a certificate error at \"' + OPENVIDU_SERVER_URL + '\"\n\nClick OK to navigate and accept it. ' +
+						'If no certificate warning is shown, then check that your OpenVidu Server is up and running at "' + OPENVIDU_SERVER_URL + '"')) {
+						location.assign(OPENVIDU_SERVER_URL + '/accept-certificate');
+					}
 				}
-			} else {
-				console.warn(errorMsg + ' (' + http.status + ')');
-				console.warn(http.responseText);
-				$('#textarea-http').text(errorMsg + ": HTTP " + http.status + " (" + http.responseText + ")");
 			}
-		}
-	}
+		});
+	});
 }
 
-function startRecording() {
-	var outputMode = $('input[name=outputMode]:checked').val();
-	var hasAudio = $('#has-audio-checkbox').prop('checked');
-	var hasVideo = $('#has-video-checkbox').prop('checked');
-	httpRequest(
-		'POST',
-		'recording-node/api/recording/start', {
-			session: session.sessionId,
-			outputMode: outputMode,
-			hasAudio: hasAudio,
-			hasVideo: hasVideo
-		},
-		'Start recording WRONG',
-		res => {
-			console.log(res);
-			document.getElementById('forceRecordingId').value = res.id;
-			checkBtnsRecordings();
-			$('#textarea-http').text(JSON.stringify(res, null, "\t"));
-		}
-	);
+function createToken(sessionId) { // See https://docs.openvidu.io/en/stable/reference-docs/REST-API/#post-openviduapisessionsltsession_idgtconnection
+	return new Promise(function(resolve, reject) {
+		$.ajax({
+			type: "POST",
+			url: OPENVIDU_SERVER_URL + "/openvidu/api/sessions/" + sessionId + "/connection",
+			data: JSON.stringify({}),
+			headers: {
+				"Authorization": "Basic " + btoa("OPENVIDUAPP:" + OPENVIDU_SERVER_SECRET),
+				"Content-Type": "application/json"
+			},
+			success: function(response) { resolve(response.token); },
+			error: function(error) { reject(error); }
+		});
+	});
 }
-
-function stopRecording() {
-	var forceRecordingId = document.getElementById('forceRecordingId').value;
-	httpRequest(
-		'POST',
-		'recording-node/api/recording/stop', {
-			recording: forceRecordingId
-		},
-		'Stop recording WRONG',
-		res => {
-			console.log(res);
-			$('#textarea-http').text(JSON.stringify(res, null, "\t"));
-		}
-	);
-}
-
-function deleteRecording() {
-	var forceRecordingId = document.getElementById('forceRecordingId').value;
-	httpRequest(
-		'DELETE',
-		'recording-node/api/recording/delete', {
-			recording: forceRecordingId
-		},
-		'Delete recording WRONG',
-		res => {
-			console.log("DELETE ok");
-			$('#textarea-http').text("DELETE ok");
-		}
-	);
-}
-
-function getRecording() {
-	var forceRecordingId = document.getElementById('forceRecordingId').value;
-	httpRequest(
-		'GET',
-		'recording-node/api/recording/get/' + forceRecordingId, {},
-		'Get recording WRONG',
-		res => {
-			console.log(res);
-			$('#textarea-http').text(JSON.stringify(res, null, "\t"));
-		}
-	);
-}
-
-function listRecordings() {
-	httpRequest(
-		'GET',
-		'recording-node/api/recording/list', {},
-		'List recordings WRONG',
-		res => {
-			console.log(res);
-			$('#textarea-http').text(JSON.stringify(res, null, "\t"));
-		}
-	);
-}
-
-/* APPLICATION REST METHODS */
-
-
-
-/* APPLICATION BROWSER METHODS */
-
-events = '';
-
-window.onbeforeunload = function () { // Gracefully leave session
-	if (session) {
-		removeUser();
-		leaveSession();
-	}
-}
-
-function updateNumVideos(i) {
-	numVideos += i;
-	$('video').removeClass();
-	switch (numVideos) {
-		case 1:
-			$('video').addClass('two');
-			break;
-		case 2:
-			$('video').addClass('two');
-			break;
-		case 3:
-			$('video').addClass('three');
-			break;
-		case 4:
-			$('video').addClass('four');
-			break;
-	}
-}
-
-function checkBtnsForce() {
-	if (document.getElementById("forceValue").value === "") {
-		document.getElementById('buttonForceUnpublish').disabled = true;
-		document.getElementById('buttonForceDisconnect').disabled = true;
-	} else {
-		document.getElementById('buttonForceUnpublish').disabled = false;
-		document.getElementById('buttonForceDisconnect').disabled = false;
-	}
-}
-
-function checkBtnsRecordings() {
-	if (document.getElementById("forceRecordingId").value === "") {
-		document.getElementById('buttonGetRecording').disabled = true;
-		document.getElementById('buttonStopRecording').disabled = true;
-		document.getElementById('buttonDeleteRecording').disabled = true;
-	} else {
-		document.getElementById('buttonGetRecording').disabled = false;
-		document.getElementById('buttonStopRecording').disabled = false;
-		document.getElementById('buttonDeleteRecording').disabled = false;
-	}
-}
-
-function pushEvent(event) {
-	events += (!events ? '' : '\n') + event.type;
-	$('#textarea-events').text(events);
-}
-
-function clearHttpTextarea() {
-	$('#textarea-http').text('');
-}
-
-function clearEventsTextarea() {
-	$('#textarea-events').text('');
-	events = '';
-}
-
-/* APPLICATION BROWSER METHODS */
